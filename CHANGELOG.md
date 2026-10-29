@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-29
+
 ### Added
 
 - One-way sync of CalDAV calendars into the Gladys calendar (Gladys 5.2.0 or
@@ -22,3 +24,6 @@ the notes of the version's GitHub Release.
 - Settings: sync interval, days of history and days ahead.
 - "Sync now" action in the Configuration screen.
 - Connection status reporting the accounts that fail to sync.
+
+[Unreleased]: https://github.com/bertrandda/gladys-caldav-sync/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/bertrandda/gladys-caldav-sync/releases/tag/v1.0.0
