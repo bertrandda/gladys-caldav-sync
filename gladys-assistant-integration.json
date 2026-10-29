@@ -11,7 +11,7 @@
   "gladys_version": ">=5.2.0",
   "cover_image": "https://raw.githubusercontent.com/bertrandda/gladys-caldav-sync/master/caldav.jpg",
   "categories": ["services"],
-  "transports": ["local","cloud"],
+  "transports": ["local", "cloud"],
   "config_schema": [
     {
       "key": "intro",
