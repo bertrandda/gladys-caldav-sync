@@ -1,0 +1,112 @@
+{
+  "manifest_version": 1,
+  "type": "calendar",
+  "name": "CalDAV",
+  "description": {
+    "en": "Sync your CalDAV calendars (Nextcloud, iCloud, Fastmail…) into Gladys.",
+    "fr": "Synchronisez vos calendriers CalDAV (Nextcloud, iCloud, Fastmail…) dans Gladys."
+  },
+  "version": "1.0.0",
+  "docker_image": "ghcr.io/bertrandda/gladys-caldav-sync:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "cover_image": "https://raw.githubusercontent.com/bertrandda/gladys-caldav-sync/main/cover.jpg",
+  "categories": ["services"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": { "en": "How it works", "fr": "Fonctionnement" },
+      "description": {
+        "en": "Each user enables the integration for themselves in the \"My calendars\" block below, with their own CalDAV server and credentials. Their calendars and events are copied into Gladys, one way: Gladys never writes to the CalDAV server. The settings here apply to every user.",
+        "fr": "Chaque utilisateur active l'intégration pour lui-même dans le bloc « Mes calendriers » ci-dessous, avec son propre serveur CalDAV et ses identifiants. Ses calendriers et événements sont copiés dans Gladys, à sens unique : Gladys n'écrit jamais sur le serveur CalDAV. Les réglages ci-dessous s'appliquent à tous les utilisateurs."
+      }
+    },
+    {
+      "key": "sync_interval",
+      "type": "number",
+      "label": { "en": "Sync interval (minutes)", "fr": "Intervalle de synchronisation (minutes)" },
+      "description": {
+        "en": "How often each user's calendars are read from their CalDAV server.",
+        "fr": "Fréquence de lecture des calendriers de chaque utilisateur sur son serveur CalDAV."
+      },
+      "required": false,
+      "default": 15,
+      "min": 5,
+      "max": 1440
+    },
+    {
+      "key": "past_days",
+      "type": "number",
+      "label": { "en": "Days of history", "fr": "Jours d'historique" },
+      "description": {
+        "en": "Past events older than this are not synced.",
+        "fr": "Les événements passés plus anciens ne sont pas synchronisés."
+      },
+      "required": false,
+      "default": 30,
+      "min": 0,
+      "max": 365
+    },
+    {
+      "key": "future_days",
+      "type": "number",
+      "label": { "en": "Days ahead", "fr": "Jours à venir" },
+      "description": {
+        "en": "Horizon of the sync: recurring events are expanded up to this many days ahead.",
+        "fr": "Horizon de la synchronisation : les événements récurrents sont développés jusqu'à ce nombre de jours."
+      },
+      "required": false,
+      "default": 365,
+      "min": 7,
+      "max": 730
+    }
+  ],
+  "account_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": { "en": "Your CalDAV account", "fr": "Votre compte CalDAV" },
+      "description": {
+        "en": "Server URL examples: Nextcloud https://cloud.example.com/remote.php/dav, iCloud https://caldav.icloud.com, Fastmail https://caldav.fastmail.com, Baïkal https://dav.example.com/dav.php. Use an app password when your provider offers one (mandatory for iCloud).",
+        "fr": "Exemples d'URL de serveur : Nextcloud https://cloud.exemple.fr/remote.php/dav, iCloud https://caldav.icloud.com, Fastmail https://caldav.fastmail.com, Baïkal https://dav.exemple.fr/dav.php. Utilisez un mot de passe d'application si votre fournisseur en propose (obligatoire pour iCloud)."
+      }
+    },
+    {
+      "key": "server_url",
+      "type": "string",
+      "label": { "en": "CalDAV server URL", "fr": "URL du serveur CalDAV" },
+      "placeholder": {
+        "en": "e.g. https://cloud.example.com/remote.php/dav",
+        "fr": "ex. https://cloud.exemple.fr/remote.php/dav"
+      },
+      "required": true
+    },
+    {
+      "key": "username",
+      "type": "string",
+      "label": { "en": "Username", "fr": "Nom d'utilisateur" },
+      "required": true
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": { "en": "Password", "fr": "Mot de passe" },
+      "description": {
+        "en": "An app password is recommended.",
+        "fr": "Un mot de passe d'application est recommandé."
+      },
+      "required": true
+    }
+  ],
+  "actions": [
+    {
+      "key": "sync_now",
+      "label": { "en": "Sync now", "fr": "Synchroniser maintenant" },
+      "description": {
+        "en": "Read every enabled account from its CalDAV server right away.",
+        "fr": "Relit immédiatement chaque compte activé sur son serveur CalDAV."
+      },
+      "timeout_seconds": 120
+    }
+  ]
+}
