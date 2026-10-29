@@ -21,7 +21,7 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 # Checks only read the code: no write scope for the token, whatever the

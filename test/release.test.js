@@ -109,7 +109,7 @@ test('rollChangelog moves Unreleased under the version, first release', () => {
 
 - Thing.
 
-[Unreleased]: https://github.com/template/repo/commits/main
+[Unreleased]: https://github.com/template/repo/commits/master
 `;
   assert.equal(
     rollChangelog(text, '1.0.1', '2026-01-02', REPO),

@@ -133,7 +133,7 @@ The CI runs the first three on Node 22 and 24 and builds the Docker image.
 3. The store indexer picks up the new manifest `version`; Gladys offers a
    one-click install / update.
 
-The manifest `cover_image` and the documentation are read from the `main`
+The manifest `cover_image` and the documentation are read from the `master`
 branch.
 
 ## License

@@ -1,6 +1,6 @@
 {
   "name": "gladys-caldav-sync",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Gladys Assistant external integration syncing CalDAV calendars into the Gladys calendar.",
   "type": "module",
