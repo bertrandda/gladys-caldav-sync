@@ -1,4 +1,4 @@
-# Gladys CalDAV sync
+# Gladys CalDAV
 
 External integration for [Gladys Assistant](https://gladysassistant.com) that
 syncs **CalDAV calendars** (Nextcloud, iCloud, Fastmail, Baïkal, Radicale,
@@ -75,7 +75,7 @@ every enabled user, every `sync_interval` minutes, one at a time:
 ├─ Dockerfile                        # Node 24 Alpine, read-only rootfs ready
 ├─ CHANGELOG.md                      # Keep a Changelog, rolled by the Release workflow
 ├─ .github/workflows/                # CI (format, lint, tests, Docker build) + release
-└─ cover.jpg                         # catalog cover, 800×534 px
+└─ caldav.jpg                        # catalog cover, 800×534 px
 ```
 
 Runtime dependencies: the SDK, [`tsdav`](https://github.com/natelindev/tsdav)
