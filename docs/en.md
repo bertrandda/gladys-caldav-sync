@@ -16,21 +16,38 @@ are personal data, nothing is synced until you enable it.
 
 1. Open the **CalDAV** integration, **Configuration** tab.
 2. In the **My calendars** block, fill in:
-   - the **CalDAV server URL** (see the table below);
+   - the **provider**: for a hosted provider of the first table, its server
+     URL is filled in for you; otherwise pick **Other** and type the **CalDAV
+     server URL** (second table);
    - your **username**;
    - your **password** — use an **app password** when your provider offers
      one.
 3. Click **Enable**. Your calendars show up a few seconds later.
 
-| Provider  | Server URL                                      | Notes                                        |
-| --------- | ----------------------------------------------- | -------------------------------------------- |
-| Nextcloud | `https://cloud.example.com/remote.php/dav`      | App password: Settings → Security            |
-| iCloud    | `https://caldav.icloud.com`                     | Apple ID + app-specific password (mandatory) |
-| Fastmail  | `https://caldav.fastmail.com`                   | App password with CalDAV access              |
-| Baïkal    | `https://dav.example.com/dav.php`               |                                              |
-| Radicale  | `https://dav.example.com` (or `http://ip:5232`) |                                              |
-| SOGo      | `https://mail.example.com/SOGo/dav`             |                                              |
-| Synology  | `https://nas.example.com:5001/caldav`           |                                              |
+Hosted providers, available in the **Provider** list:
+
+| Provider        | Server URL (filled in for you)        | Username, password                                                                   |
+| --------------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
+| iCloud          | `https://caldav.icloud.com`           | Apple ID + app-specific password (mandatory)                                         |
+| Google Calendar | `https://www.google.com/calendar/dav` | Gmail address + app password (mandatory, requires two-step verification)             |
+| Fastmail        | `https://caldav.fastmail.com`         | Fastmail address + app password with CalDAV access                                   |
+| Yahoo           | `https://caldav.calendar.yahoo.com`   | Yahoo address + app password                                                         |
+| mailbox.org     | `https://dav.mailbox.org`             | mailbox.org address + password (app password with two-factor authentication enabled) |
+| Posteo          | `https://posteo.de:8443`              | Posteo address + password                                                            |
+
+Other servers: pick **Other** and type the URL.
+
+| Server     | Server URL                                      | Notes                                                         |
+| ---------- | ----------------------------------------------- | ------------------------------------------------------------- |
+| Nextcloud  | `https://cloud.example.com/remote.php/dav`      | App password: Settings → Security                             |
+| Synology   | `https://nas.example.com:5001/caldav`           | Calendar app → CalDAV Account                                 |
+| Baïkal     | `https://dav.example.com/dav.php`               |                                                               |
+| Radicale   | `https://dav.example.com` (or `http://ip:5232`) |                                                               |
+| SOGo       | `https://mail.example.com/SOGo/dav`             |                                                               |
+| Infomaniak | `https://sync.infomaniak.com`                   | Username and URL shown by the wizard at config.infomaniak.com |
+
+Outlook / Microsoft 365 and Proton Calendar offer no CalDAV access: they
+cannot be synced by this integration.
 
 The integration discovers your calendars from that URL (principal and
 calendar home): no need to enter the address of each calendar. Task lists are
@@ -73,6 +90,9 @@ calendars and events were synced.
   long are truncated.
 - Disabling the integration for your account deletes your synced calendars
   from Gladys (they stay untouched on the server).
+- An event the server lists but refuses to send (Google does it for some
+  events of the main calendar) is skipped, with a warning in the logs: the
+  rest of the calendar is still synced.
 
 ## Troubleshooting
 

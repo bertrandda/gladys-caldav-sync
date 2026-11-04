@@ -9,7 +9,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import { registerHandlers } from '../src/app.js';
-import { ACCOUNT_KEYS, CONFIG_BOUNDS, DEFAULT_CONFIG } from '../src/config.js';
+import {
+  ACCOUNT_KEYS,
+  CONFIG_BOUNDS,
+  DEFAULT_CONFIG,
+  DEFAULT_PROVIDER,
+  PROVIDER_URLS,
+} from '../src/config.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -77,6 +83,22 @@ test('account_schema keys are the ones normalizeAccount reads', () => {
   assert.deepEqual(valueKeys(manifest.account_schema), ACCOUNT_KEYS);
   const password = manifest.account_schema.find((field) => field.key === 'password');
   assert.equal(password.type, 'secret', 'the password must never be sent back to the frontend');
+});
+
+test('the provider options are the providers src/config.js knows', () => {
+  const field = manifest.account_schema.find((f) => f.key === 'provider');
+  assert.equal(field.type, 'select');
+  assert.equal(field.default, DEFAULT_PROVIDER);
+  assert.deepEqual(
+    field.options.map((option) => option.value),
+    Object.keys(PROVIDER_URLS),
+  );
+  for (const option of field.options) {
+    assert.ok(option.label.en && option.label.fr, `label of provider "${option.value}"`);
+  }
+  // With a hosted provider the user types no URL.
+  const url = manifest.account_schema.find((f) => f.key === 'server_url');
+  assert.notEqual(url.required, true);
 });
 
 test('section fields are purely presentational', () => {

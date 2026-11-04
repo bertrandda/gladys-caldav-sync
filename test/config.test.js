@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_CONFIG,
+  PROVIDER_URLS,
   isAccountComplete,
   normalizeAccount,
   normalizeConfig,
@@ -56,4 +57,37 @@ test('isAccountComplete requires a URL, a username and a password', () => {
   assert.equal(isAccountComplete({ ...ok, username: '' }), false);
   assert.equal(isAccountComplete(normalizeAccount({ username: 'a', password: 'b' })), false);
   assert.equal(isAccountComplete({ ...ok, server_url: 'https://' }), false);
+});
+
+test('normalizeAccount uses the URL of a hosted provider', () => {
+  const google = normalizeAccount({
+    provider: 'google',
+    server_url: 'https://typed.example.com',
+    username: 'john@gmail.com',
+    password: 'app-password',
+  });
+  assert.equal(google.server_url, PROVIDER_URLS.google);
+  assert.equal(isAccountComplete(google), true);
+  assert.equal(
+    isAccountComplete(normalizeAccount({ provider: 'icloud', username: 'a', password: 'b' })),
+    true,
+  );
+});
+
+test('normalizeAccount keeps the typed URL for "custom", a missing or unknown provider', () => {
+  for (const provider of ['custom', undefined, '', 'unknown', 'hasOwnProperty']) {
+    assert.equal(
+      normalizeAccount({ provider, server_url: 'dav.example.com' }).server_url,
+      'https://dav.example.com',
+      `provider ${provider}`,
+    );
+  }
+});
+
+test('every hosted provider URL is an https URL', () => {
+  for (const [provider, url] of Object.entries(PROVIDER_URLS)) {
+    if (url !== null) {
+      assert.equal(new URL(url).protocol, 'https:', provider);
+    }
+  }
 });

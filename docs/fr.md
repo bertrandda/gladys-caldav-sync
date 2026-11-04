@@ -17,22 +17,39 @@ vous ne l'avez pas activée.
 
 1. Ouvrez l'intégration **CalDAV**, onglet **Configuration**.
 2. Dans le bloc **Mes calendriers**, renseignez :
-   - l'**URL du serveur CalDAV** (voir le tableau ci-dessous) ;
+   - le **fournisseur** : pour un fournisseur hébergé du premier tableau,
+     l'URL du serveur est renseignée pour vous ; sinon choisissez **Autre** et
+     saisissez l'**URL du serveur CalDAV** (second tableau) ;
    - votre **nom d'utilisateur** ;
    - votre **mot de passe** — utilisez un **mot de passe d'application** si
      votre fournisseur en propose un.
 3. Cliquez sur **Activer**. Vos calendriers apparaissent quelques secondes
    plus tard.
 
-| Fournisseur | URL du serveur                                 | Remarques                                                    |
-| ----------- | ---------------------------------------------- | ------------------------------------------------------------ |
-| Nextcloud   | `https://cloud.exemple.fr/remote.php/dav`      | Mot de passe d'application : Paramètres → Sécurité           |
-| iCloud      | `https://caldav.icloud.com`                    | Identifiant Apple + mot de passe d'application (obligatoire) |
-| Fastmail    | `https://caldav.fastmail.com`                  | Mot de passe d'application avec l'accès CalDAV               |
-| Baïkal      | `https://dav.exemple.fr/dav.php`               |                                                              |
-| Radicale    | `https://dav.exemple.fr` (ou `http://ip:5232`) |                                                              |
-| SOGo        | `https://mail.exemple.fr/SOGo/dav`             |                                                              |
-| Synology    | `https://nas.exemple.fr:5001/caldav`           |                                                              |
+Fournisseurs hébergés, disponibles dans la liste **Fournisseur** :
+
+| Fournisseur   | URL du serveur (renseignée pour vous) | Identifiant, mot de passe                                                                        |
+| ------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| iCloud        | `https://caldav.icloud.com`           | Identifiant Apple + mot de passe d'application (obligatoire)                                     |
+| Google Agenda | `https://www.google.com/calendar/dav` | Adresse Gmail + mot de passe d'application (obligatoire, nécessite la validation en deux étapes) |
+| Fastmail      | `https://caldav.fastmail.com`         | Adresse Fastmail + mot de passe d'application avec l'accès CalDAV                                |
+| Yahoo         | `https://caldav.calendar.yahoo.com`   | Adresse Yahoo + mot de passe d'application                                                       |
+| mailbox.org   | `https://dav.mailbox.org`             | Adresse mailbox.org + mot de passe (d'application si la double authentification est activée)     |
+| Posteo        | `https://posteo.de:8443`              | Adresse Posteo + mot de passe                                                                    |
+
+Autres serveurs : choisissez **Autre** et saisissez l'URL.
+
+| Serveur    | URL du serveur                                 | Remarques                                                           |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| Nextcloud  | `https://cloud.exemple.fr/remote.php/dav`      | Mot de passe d'application : Paramètres → Sécurité                  |
+| Synology   | `https://nas.exemple.fr:5001/caldav`           | Application Calendar → Compte CalDAV                                |
+| Baïkal     | `https://dav.exemple.fr/dav.php`               |                                                                     |
+| Radicale   | `https://dav.exemple.fr` (ou `http://ip:5232`) |                                                                     |
+| SOGo       | `https://mail.exemple.fr/SOGo/dav`             |                                                                     |
+| Infomaniak | `https://sync.infomaniak.com`                  | Identifiant et URL donnés par l'assistant sur config.infomaniak.com |
+
+Outlook / Microsoft 365 et Proton Calendar ne proposent pas d'accès CalDAV :
+ils ne peuvent pas être synchronisés par cette intégration.
 
 L'intégration découvre elle-même vos calendriers depuis cette URL (principal
 et dossier de calendriers) : inutile d'indiquer l'adresse de chaque calendrier.
@@ -77,6 +94,9 @@ affiche le nombre de calendriers et d'événements synchronisés.
   calendrier ; les textes trop longs sont tronqués.
 - Désactiver l'intégration pour votre compte supprime de Gladys vos
   calendriers synchronisés (ils restent intacts sur le serveur).
+- Un événement que le serveur liste mais refuse d'envoyer (Google le fait
+  pour certains événements de l'agenda principal) est ignoré, avec un
+  avertissement dans les logs : le reste du calendrier est bien synchronisé.
 
 ## Dépannage
 

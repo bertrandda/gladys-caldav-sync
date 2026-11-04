@@ -33,7 +33,26 @@ export const DEFAULT_CONFIG = {
 };
 
 // Keys of the manifest `account_schema` (sections aside).
-export const ACCOUNT_KEYS = ['server_url', 'username', 'password'];
+export const ACCOUNT_KEYS = ['provider', 'server_url', 'username', 'password'];
+
+// Hosted providers whose CalDAV URL is the same for every account: picking one
+// in the "My calendars" block spares the user from finding the URL. `custom`
+// (the default, and what accounts saved before this list read as) uses the
+// typed `server_url`. MUST stay consistent with the `options` of the
+// `provider` field of the manifest `account_schema`.
+export const PROVIDER_URLS = {
+  custom: null,
+  icloud: 'https://caldav.icloud.com',
+  // The endpoint accepting an app password (the documented v2 API requires
+  // OAuth), the one the core CalDAV integration of Gladys used.
+  google: 'https://www.google.com/calendar/dav',
+  fastmail: 'https://caldav.fastmail.com',
+  yahoo: 'https://caldav.calendar.yahoo.com',
+  mailbox_org: 'https://dav.mailbox.org',
+  posteo: 'https://posteo.de:8443',
+};
+
+export const DEFAULT_PROVIDER = 'custom';
 
 function boundedNumber(value, key) {
   const { min, max } = CONFIG_BOUNDS[key];
@@ -58,12 +77,16 @@ export function normalizeConfig(raw = {}) {
 
 /**
  * Normalize the account values a user typed in the "My calendars" block.
- * A server URL without scheme is assumed to be https.
+ * A hosted provider imposes its URL; otherwise the typed server URL is used,
+ * a URL without scheme being assumed to be https.
  * @param {Record<string, unknown>} raw `config` of a CalendarAccount
  */
 export function normalizeAccount(raw = {}) {
+  const provider = Object.hasOwn(PROVIDER_URLS, raw.provider) ? raw.provider : DEFAULT_PROVIDER;
   let serverUrl = typeof raw.server_url === 'string' ? raw.server_url.trim() : '';
-  if (serverUrl !== '' && !/^https?:\/\//i.test(serverUrl)) {
+  if (PROVIDER_URLS[provider]) {
+    serverUrl = PROVIDER_URLS[provider];
+  } else if (serverUrl !== '' && !/^https?:\/\//i.test(serverUrl)) {
     serverUrl = `https://${serverUrl}`;
   }
   return {

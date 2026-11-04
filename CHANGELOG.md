@@ -10,6 +10,21 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- A "Provider" list in the "My calendars" block (iCloud, Google Calendar,
+  Fastmail, Yahoo, mailbox.org, Posteo) fills in the server URL; "Other" keeps
+  the typed URL, as for the accounts saved before. The documentation lists
+  the server URLs of the main providers.
+
+### Fixed
+
+- A calendar no longer fails as a whole when the server refuses one of its
+  events: the events are read with a single calendar-query, and an object
+  answering an error is skipped with a warning (Google answered 404 on some
+  events of the main calendar of an account, which made the whole calendar
+  fail).
+
 ## [1.0.0] - 2026-10-29
 
 ### Added

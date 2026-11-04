@@ -1,7 +1,7 @@
 # Gladys CalDAV
 
 External integration for [Gladys Assistant](https://gladysassistant.com) that
-syncs **CalDAV calendars** (Nextcloud, iCloud, Fastmail, Baïkal, Radicale,
+syncs **CalDAV calendars** (Nextcloud, iCloud, Google, Fastmail, Baïkal, Radicale,
 SOGo, Synology…) into the Gladys calendar, built with the JavaScript SDK
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js)
 and the structure of the official

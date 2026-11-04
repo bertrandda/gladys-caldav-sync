@@ -68,19 +68,42 @@
       "type": "section",
       "label": { "en": "Your CalDAV account", "fr": "Votre compte CalDAV" },
       "description": {
-        "en": "Server URL examples: Nextcloud https://cloud.example.com/remote.php/dav, iCloud https://caldav.icloud.com, Fastmail https://caldav.fastmail.com, Baïkal https://dav.example.com/dav.php. Use an app password when your provider offers one (mandatory for iCloud).",
-        "fr": "Exemples d'URL de serveur : Nextcloud https://cloud.exemple.fr/remote.php/dav, iCloud https://caldav.icloud.com, Fastmail https://caldav.fastmail.com, Baïkal https://dav.exemple.fr/dav.php. Utilisez un mot de passe d'application si votre fournisseur en propose (obligatoire pour iCloud)."
+        "en": "Pick your provider: its server URL is filled in for you. For a self-hosted server, pick \"Other\" and type its URL, e.g. Nextcloud https://cloud.example.com/remote.php/dav, Synology https://nas.example.com:5001/caldav, Baïkal https://dav.example.com/dav.php. Use an app password when your provider offers one (mandatory for iCloud and Google).",
+        "fr": "Choisissez votre fournisseur : l'URL du serveur est renseignée pour vous. Pour un serveur auto-hébergé, choisissez « Autre » et saisissez son URL, par ex. Nextcloud https://cloud.exemple.fr/remote.php/dav, Synology https://nas.exemple.fr:5001/caldav, Baïkal https://dav.exemple.fr/dav.php. Utilisez un mot de passe d'application si votre fournisseur en propose (obligatoire pour iCloud et Google)."
       }
+    },
+    {
+      "key": "provider",
+      "type": "select",
+      "label": { "en": "Provider", "fr": "Fournisseur" },
+      "default": "custom",
+      "options": [
+        {
+          "value": "custom",
+          "label": { "en": "Other (server URL below)", "fr": "Autre (URL du serveur ci-dessous)" }
+        },
+        { "value": "icloud", "label": { "en": "iCloud", "fr": "iCloud" } },
+        { "value": "google", "label": { "en": "Google Calendar", "fr": "Google Agenda" } },
+        { "value": "fastmail", "label": { "en": "Fastmail", "fr": "Fastmail" } },
+        { "value": "yahoo", "label": { "en": "Yahoo", "fr": "Yahoo" } },
+        { "value": "mailbox_org", "label": { "en": "mailbox.org", "fr": "mailbox.org" } },
+        { "value": "posteo", "label": { "en": "Posteo", "fr": "Posteo" } }
+      ],
+      "required": false
     },
     {
       "key": "server_url",
       "type": "string",
       "label": { "en": "CalDAV server URL", "fr": "URL du serveur CalDAV" },
+      "description": {
+        "en": "Only for the \"Other\" provider: ignored otherwise.",
+        "fr": "Uniquement pour le fournisseur « Autre » : ignorée sinon."
+      },
       "placeholder": {
         "en": "e.g. https://cloud.example.com/remote.php/dav",
         "fr": "ex. https://cloud.exemple.fr/remote.php/dav"
       },
-      "required": true
+      "required": false
     },
     {
       "key": "username",
