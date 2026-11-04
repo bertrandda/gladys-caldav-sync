@@ -114,9 +114,8 @@ export async function createCalDavClient(account) {
 // Not tsdav's fetchCalendarObjects: it lists the hrefs with a calendar-query,
 // then re-reads them with a calendar-multiget, and fails the WHOLE calendar as
 // soon as one href of the multiget answers an error. Google does that on the
-// main calendar of an account (404 on objects it just listed: invitations,
-// events created from Gmail, hrefs it does not resolve back), so one such
-// object made every event of the calendar disappear.
+// main calendar of an account (404 on an object it has just listed), so one
+// such object made the whole calendar fail.
 //
 // Here one calendar-query asks for the data directly (RFC 4791 §7.8): a single
 // request, no href round-trip, and an object answering an error is skipped on
