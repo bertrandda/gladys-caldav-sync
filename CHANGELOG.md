@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-05
+
 ### Added
 
 - "Provider" list in the account form: Google, iCloud, Fastmail and
@@ -42,5 +44,6 @@ the notes of the version's GitHub Release.
 - "Sync now" action in the Configuration screen.
 - Connection status reporting the accounts that fail to sync.
 
-[Unreleased]: https://github.com/bertrandda/gladys-caldav-sync/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/bertrandda/gladys-caldav-sync/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/bertrandda/gladys-caldav-sync/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/bertrandda/gladys-caldav-sync/releases/tag/v1.0.0
