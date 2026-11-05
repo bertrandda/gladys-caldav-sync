@@ -192,8 +192,11 @@ export class SyncManager {
     try {
       const normalized = normalizeAccount(account.config);
       if (!isAccountComplete(normalized)) {
-        throw new Error('incomplete account: server URL, username and password are required');
+        throw new Error(
+          'incomplete account: a provider or a server URL, a username and a password are required',
+        );
       }
+      logger.debug(`${selector}: connecting to ${normalized.server_url} (${normalized.provider})`);
       const client = await this.createClient(normalized);
       if (!this.caches.has(selector)) {
         this.caches.set(selector, { ctags: new Map() });
@@ -208,6 +211,7 @@ export class SyncManager {
       result = { ok: summary.errors.length === 0, ...summary };
       logger.info(
         `${selector}: ${summary.calendars} calendar(s), ${summary.events} event(s) synced` +
+          (summary.skipped > 0 ? `, ${summary.skipped} calendar(s) switched off` : '') +
           (summary.errors.length > 0 ? `, ${summary.errors.length} calendar(s) failed` : ''),
       );
     } catch (error) {

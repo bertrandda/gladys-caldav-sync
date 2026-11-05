@@ -13,6 +13,7 @@
 import { logger } from '@gladysassistant/integration-sdk';
 import { createCalDavClient } from './caldav.js';
 import { normalizeConfig } from './config.js';
+import { setDebugLogs } from './logging.js';
 import { SyncManager } from './scheduler.js';
 
 /**
@@ -64,6 +65,7 @@ export function registerHandlers(gladys, deps = {}) {
   gladys.on('connected', async () => {
     try {
       config = normalizeConfig(await gladys.getConfig());
+      setDebugLogs(config.debug_logs);
       await manager.reload(await gladys.getCalendarAccounts());
     } catch (err) {
       logger.error('Post-connection initialization failed', err);
@@ -95,6 +97,7 @@ export function registerHandlers(gladys, deps = {}) {
     logger.info('onConfigUpdated -> new configuration received');
     const previous = config;
     config = normalizeConfig(newConfig);
+    setDebugLogs(config.debug_logs);
     if (previous.past_days !== config.past_days || previous.future_days !== config.future_days) {
       // A new window changes what each calendar holds: re-sync everyone now.
       await manager.reload([...manager.accounts.values()]);

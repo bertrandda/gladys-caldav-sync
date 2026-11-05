@@ -30,10 +30,22 @@ export const DEFAULT_CONFIG = {
   past_days: 30,
   // Days ahead synced (recurrences are expanded over this horizon).
   future_days: 365,
+  // Debug level for every logger, plus the CalDAV request traces of tsdav.
+  debug_logs: false,
 };
 
 // Keys of the manifest `account_schema` (sections aside).
-export const ACCOUNT_KEYS = ['server_url', 'username', 'password'];
+export const ACCOUNT_KEYS = ['provider', 'server_url', 'username', 'password'];
+
+// Server URL of the providers offered in the `provider` select of the
+// manifest (its options are `other` plus these keys). Self-hosted servers
+// (Nextcloud, Baïkal…) have no fixed URL: they are `other`.
+export const PROVIDERS = {
+  google: 'https://www.google.com/calendar/dav',
+  icloud: 'https://caldav.icloud.com',
+  fastmail: 'https://caldav.fastmail.com',
+  infomaniak: 'https://sync.infomaniak.com',
+};
 
 function boundedNumber(value, key) {
   const { min, max } = CONFIG_BOUNDS[key];
@@ -53,20 +65,28 @@ export function normalizeConfig(raw = {}) {
     sync_interval: boundedNumber(raw.sync_interval, 'sync_interval'),
     past_days: boundedNumber(raw.past_days, 'past_days'),
     future_days: boundedNumber(raw.future_days, 'future_days'),
+    debug_logs: raw.debug_logs === true || raw.debug_logs === 'true',
   };
 }
 
 /**
  * Normalize the account values a user typed in the "My calendars" block.
- * A server URL without scheme is assumed to be https.
+ * A typed server URL always wins (the accounts created before the provider
+ * list have none); an empty one is the URL of the chosen provider. A server
+ * URL without scheme is assumed to be https.
  * @param {Record<string, unknown>} raw `config` of a CalendarAccount
  */
 export function normalizeAccount(raw = {}) {
+  const provider = Object.hasOwn(PROVIDERS, raw.provider) ? raw.provider : 'other';
   let serverUrl = typeof raw.server_url === 'string' ? raw.server_url.trim() : '';
+  if (serverUrl === '' && provider !== 'other') {
+    serverUrl = PROVIDERS[provider];
+  }
   if (serverUrl !== '' && !/^https?:\/\//i.test(serverUrl)) {
     serverUrl = `https://${serverUrl}`;
   }
   return {
+    provider,
     server_url: serverUrl,
     username: typeof raw.username === 'string' ? raw.username.trim() : '',
     // Never trimmed: a password may legitimately start or end with a space.

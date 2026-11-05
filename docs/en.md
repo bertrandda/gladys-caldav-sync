@@ -1,7 +1,7 @@
 # CalDAV
 
-This integration copies your **CalDAV** calendars (Nextcloud, iCloud,
-Fastmail, Baïkal, Radicale, SOGo, Synology Calendar…) into the Gladys
+This integration copies your **CalDAV** calendars (Google, iCloud, Nextcloud,
+Fastmail, Infomaniak, Baïkal, Radicale, SOGo, Synology Calendar…) into the Gladys
 calendar. The events show up in the calendar view, can trigger scenes ("an
 event is coming") and are known by the assistant.
 
@@ -16,21 +16,26 @@ are personal data, nothing is synced until you enable it.
 
 1. Open the **CalDAV** integration, **Configuration** tab.
 2. In the **My calendars** block, fill in:
-   - the **CalDAV server URL** (see the table below);
+   - your **provider**: Google, iCloud, Fastmail and Infomaniak need no URL;
+   - otherwise ("Other" provider), the **CalDAV server URL** (see the table
+     below) — a URL typed here is always used, whatever the provider;
    - your **username**;
    - your **password** — use an **app password** when your provider offers
      one.
 3. Click **Enable**. Your calendars show up a few seconds later.
 
-| Provider  | Server URL                                      | Notes                                        |
-| --------- | ----------------------------------------------- | -------------------------------------------- |
-| Nextcloud | `https://cloud.example.com/remote.php/dav`      | App password: Settings → Security            |
-| iCloud    | `https://caldav.icloud.com`                     | Apple ID + app-specific password (mandatory) |
-| Fastmail  | `https://caldav.fastmail.com`                   | App password with CalDAV access              |
-| Baïkal    | `https://dav.example.com/dav.php`               |                                              |
-| Radicale  | `https://dav.example.com` (or `http://ip:5232`) |                                              |
-| SOGo      | `https://mail.example.com/SOGo/dav`             |                                              |
-| Synology  | `https://nas.example.com:5001/caldav`           |                                              |
+| Provider   | Server URL                                          | Notes                                                         |
+| ---------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| Google     | in the list (`https://www.google.com/calendar/dav`) | Gmail address + app password (2-Step Verification must be on) |
+| iCloud     | in the list (`https://caldav.icloud.com`)           | Apple ID + app-specific password (mandatory)                  |
+| Fastmail   | in the list (`https://caldav.fastmail.com`)         | App password with CalDAV access                               |
+| Infomaniak | in the list (`https://sync.infomaniak.com`)         | Infomaniak login (not the email address) + app password       |
+| Nextcloud  | `https://cloud.example.com/remote.php/dav`          | App password: Settings → Security                             |
+| Framagenda | `https://framagenda.org/remote.php/dav`             | App password: Settings → Security                             |
+| Baïkal     | `https://dav.example.com/dav.php`                   |                                                               |
+| Radicale   | `https://dav.example.com` (or `http://ip:5232`)     |                                                               |
+| SOGo       | `https://mail.example.com/SOGo/dav`                 |                                                               |
+| Synology   | `https://nas.example.com:5001/caldav`               |                                                               |
 
 The integration discovers your calendars from that URL (principal and
 calendar home): no need to enter the address of each calendar. Task lists are
@@ -57,6 +62,8 @@ These settings apply to every user:
   synced.
 - **Days ahead** — 365 days by default (up to 730): recurring events are
   expanded up to that horizon.
+- **Detailed logs** — off by default. Switched on, every CalDAV request and
+  its result is written to the integration logs (see Troubleshooting).
 
 The **Sync now** button reads every account right away and shows how many
 calendars and events were synced.
@@ -86,6 +93,14 @@ causes:
   password is required.
 - **Self-signed certificate** — the server must present a valid HTTPS
   certificate (or be reached over HTTP on the local network).
+- **"N object(s) the server could not return were skipped"** — the server
+  lists an event it then fails to send (Google does it on some calendars).
+  The rest of the calendar is synced; only those objects are missing.
 
 The administrator finds the details of the errors in the integration logs
 (the integration page, supervision tab). Passwords never show up there.
+
+To report a problem, switch on **Detailed logs** in the settings, click
+**Sync now**, copy the logs, then switch the option off: they show each step
+of the discovery and every request sent to the server, with the calendar
+URLs (often your email address) — review them before posting them publicly.

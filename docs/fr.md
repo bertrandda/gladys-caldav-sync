@@ -1,7 +1,7 @@
 # CalDAV
 
-Cette intégration copie vos calendriers **CalDAV** (Nextcloud, iCloud, Fastmail,
-Baïkal, Radicale, SOGo, Synology Calendar…) dans le calendrier de Gladys. Les
+Cette intégration copie vos calendriers **CalDAV** (Google, iCloud, Nextcloud,
+Fastmail, Infomaniak, Baïkal, Radicale, SOGo, Synology Calendar…) dans le calendrier de Gladys. Les
 événements apparaissent dans la vue calendrier, peuvent déclencher des scènes
 (« un événement arrive ») et sont connus de l'assistant.
 
@@ -17,22 +17,29 @@ vous ne l'avez pas activée.
 
 1. Ouvrez l'intégration **CalDAV**, onglet **Configuration**.
 2. Dans le bloc **Mes calendriers**, renseignez :
-   - l'**URL du serveur CalDAV** (voir le tableau ci-dessous) ;
+   - votre **fournisseur** : Google, iCloud, Fastmail et Infomaniak ne
+     demandent pas d'URL ;
+   - sinon (fournisseur « Autre »), l'**URL du serveur CalDAV** (voir le
+     tableau ci-dessous) — une URL saisie ici est toujours utilisée, quel que
+     soit le fournisseur ;
    - votre **nom d'utilisateur** ;
    - votre **mot de passe** — utilisez un **mot de passe d'application** si
      votre fournisseur en propose un.
 3. Cliquez sur **Activer**. Vos calendriers apparaissent quelques secondes
    plus tard.
 
-| Fournisseur | URL du serveur                                 | Remarques                                                    |
-| ----------- | ---------------------------------------------- | ------------------------------------------------------------ |
-| Nextcloud   | `https://cloud.exemple.fr/remote.php/dav`      | Mot de passe d'application : Paramètres → Sécurité           |
-| iCloud      | `https://caldav.icloud.com`                    | Identifiant Apple + mot de passe d'application (obligatoire) |
-| Fastmail    | `https://caldav.fastmail.com`                  | Mot de passe d'application avec l'accès CalDAV               |
-| Baïkal      | `https://dav.exemple.fr/dav.php`               |                                                              |
-| Radicale    | `https://dav.exemple.fr` (ou `http://ip:5232`) |                                                              |
-| SOGo        | `https://mail.exemple.fr/SOGo/dav`             |                                                              |
-| Synology    | `https://nas.exemple.fr:5001/caldav`           |                                                              |
+| Fournisseur | URL du serveur                                        | Remarques                                                                      |
+| ----------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Google      | dans la liste (`https://www.google.com/calendar/dav`) | Adresse Gmail + mot de passe d'application (validation en deux étapes activée) |
+| iCloud      | dans la liste (`https://caldav.icloud.com`)           | Identifiant Apple + mot de passe d'application (obligatoire)                   |
+| Fastmail    | dans la liste (`https://caldav.fastmail.com`)         | Mot de passe d'application avec l'accès CalDAV                                 |
+| Infomaniak  | dans la liste (`https://sync.infomaniak.com`)         | Identifiant Infomaniak (pas l'adresse e-mail) + mot de passe d'application     |
+| Nextcloud   | `https://cloud.exemple.fr/remote.php/dav`             | Mot de passe d'application : Paramètres → Sécurité                             |
+| Framagenda  | `https://framagenda.org/remote.php/dav`               | Mot de passe d'application : Paramètres → Sécurité                             |
+| Baïkal      | `https://dav.exemple.fr/dav.php`                      |                                                                                |
+| Radicale    | `https://dav.exemple.fr` (ou `http://ip:5232`)        |                                                                                |
+| SOGo        | `https://mail.exemple.fr/SOGo/dav`                    |                                                                                |
+| Synology    | `https://nas.exemple.fr:5001/caldav`                  |                                                                                |
 
 L'intégration découvre elle-même vos calendriers depuis cette URL (principal
 et dossier de calendriers) : inutile d'indiquer l'adresse de chaque calendrier.
@@ -60,6 +67,8 @@ Ces réglages s'appliquent à tous les utilisateurs :
   défaut) ne sont pas synchronisés.
 - **Jours à venir** — 365 jours par défaut (jusqu'à 730) : les événements
   récurrents sont développés jusqu'à cet horizon.
+- **Logs détaillés** — désactivé par défaut. Activé, chaque requête CalDAV et
+  son résultat sont écrits dans les logs de l'intégration (voir Dépannage).
 
 Le bouton **Synchroniser maintenant** relit immédiatement tous les comptes et
 affiche le nombre de calendriers et d'événements synchronisés.
@@ -90,7 +99,17 @@ les plus fréquentes :
   mot de passe d'application est indispensable.
 - **Certificat auto-signé** — le serveur doit présenter un certificat HTTPS
   valide (ou être joint en HTTP sur le réseau local).
+- **« N object(s) the server could not return were skipped »** — le serveur
+  liste un événement qu'il n'arrive ensuite pas à renvoyer (Google le fait sur
+  certains calendriers). Le reste du calendrier est synchronisé ; seuls ces
+  objets manquent.
 
 L'administrateur trouve le détail des erreurs dans les logs de l'intégration
 (page de l’intégration, onglet de supervision). Les mots de passe n'y
 apparaissent jamais.
+
+Pour signaler un problème, activez **Logs détaillés** dans les réglages,
+cliquez sur **Synchroniser maintenant**, copiez les logs puis désactivez
+l'option : ils montrent chaque étape de la découverte et chaque requête
+envoyée au serveur, avec les URL des calendriers (souvent votre adresse
+e-mail) — relisez-les avant de les publier.
