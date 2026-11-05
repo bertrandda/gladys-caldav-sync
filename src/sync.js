@@ -106,6 +106,7 @@ export async function syncAccount(gladys, account, { client, config, now, cache,
       .sort((a, b) => a.url.localeCompare(b.url))
       .slice(0, LIMITS.calendarsPerUser);
   }
+  logger.debug(`${user.selector}: ${remoteCalendars.length} calendar(s) on the server`);
   const inputs = remoteCalendars.map((calendar) => toCalendarInput(gladys, user, calendar));
   summary.calendars = inputs.length;
 
@@ -143,6 +144,7 @@ export async function syncAccount(gladys, account, { client, config, now, cache,
     const cacheKey = calendar.ctag ? `${calendar.ctag}|${windowKey}` : null;
     const cached = cache.ctags.get(externalId);
     if (cacheKey && cached?.key === cacheKey) {
+      logger.debug(`${user.selector}: "${calendar.name}" unchanged (same ctag)`);
       summary.events += cached.events;
       continue;
     }
@@ -167,12 +169,18 @@ export async function syncAccount(gladys, account, { client, config, now, cache,
         await write(() => gladys.publishCalendarEvents(externalId, batch.events, batch.window));
       }
       summary.events += events.length;
+      logger.debug(
+        `${user.selector}: "${calendar.name}": ${icsTexts.length} object(s), ${events.length} event(s) published`,
+      );
       if (cacheKey) {
         cache.ctags.set(externalId, { key: cacheKey, events: events.length });
       }
     } catch (error) {
       cache.ctags.delete(externalId);
-      logger.error(`${user.selector}: sync of calendar "${calendar.name}" failed`, error);
+      logger.error(
+        `${user.selector}: sync of calendar "${calendar.name}" (${calendar.url}) failed`,
+        error,
+      );
       summary.errors.push(`${calendar.name || calendar.url}: ${error.message}`);
     }
   }

@@ -3,8 +3,8 @@
   "type": "calendar",
   "name": "CalDAV",
   "description": {
-    "en": "Sync your CalDAV calendars (Nextcloud, iCloud, Fastmail…) into Gladys.",
-    "fr": "Synchronisez vos calendriers CalDAV (Nextcloud, iCloud, Fastmail…) dans Gladys."
+    "en": "Sync your CalDAV calendars (Google, iCloud, Nextcloud, Fastmail…) into Gladys.",
+    "fr": "Synchronisez vos calendriers CalDAV (Google, iCloud, Nextcloud, Fastmail…) dans Gladys."
   },
   "version": "1.0.0",
   "docker_image": "ghcr.io/bertrandda/gladys-caldav-sync:1.0.0",
@@ -60,6 +60,17 @@
       "default": 365,
       "min": 7,
       "max": 730
+    },
+    {
+      "key": "debug_logs",
+      "type": "boolean",
+      "label": { "en": "Detailed logs", "fr": "Logs détaillés" },
+      "description": {
+        "en": "Writes every CalDAV request and its result to the integration logs, to diagnose a calendar that fails to sync. They hold the calendar URLs: switch it off once done.",
+        "fr": "Écrit chaque requête CalDAV et son résultat dans les logs de l'intégration, pour diagnostiquer un calendrier qui ne se synchronise pas. Ils contiennent les URL des calendriers : désactivez-les une fois terminé."
+      },
+      "required": false,
+      "default": false
     }
   ],
   "account_schema": [
@@ -68,19 +79,42 @@
       "type": "section",
       "label": { "en": "Your CalDAV account", "fr": "Votre compte CalDAV" },
       "description": {
-        "en": "Server URL examples: Nextcloud https://cloud.example.com/remote.php/dav, iCloud https://caldav.icloud.com, Fastmail https://caldav.fastmail.com, Baïkal https://dav.example.com/dav.php. Use an app password when your provider offers one (mandatory for iCloud).",
-        "fr": "Exemples d'URL de serveur : Nextcloud https://cloud.exemple.fr/remote.php/dav, iCloud https://caldav.icloud.com, Fastmail https://caldav.fastmail.com, Baïkal https://dav.exemple.fr/dav.php. Utilisez un mot de passe d'application si votre fournisseur en propose (obligatoire pour iCloud)."
+        "en": "Pick your provider, or \"Other\" and type the URL of your server: Nextcloud https://cloud.example.com/remote.php/dav, Framagenda https://framagenda.org/remote.php/dav, Baïkal https://dav.example.com/dav.php. Use an app password when your provider offers one: mandatory for Google (2-Step Verification on) and iCloud.",
+        "fr": "Choisissez votre fournisseur, ou « Autre » et saisissez l'URL de votre serveur : Nextcloud https://cloud.exemple.fr/remote.php/dav, Framagenda https://framagenda.org/remote.php/dav, Baïkal https://dav.exemple.fr/dav.php. Utilisez un mot de passe d'application si votre fournisseur en propose : obligatoire pour Google (validation en deux étapes activée) et iCloud."
       }
+    },
+    {
+      "key": "provider",
+      "type": "select",
+      "label": { "en": "Provider", "fr": "Fournisseur" },
+      "options": [
+        {
+          "value": "other",
+          "label": {
+            "en": "Other (Nextcloud, Baïkal, Radicale…): type the URL",
+            "fr": "Autre (Nextcloud, Baïkal, Radicale…) : saisir l'URL"
+          }
+        },
+        { "value": "google", "label": { "en": "Google Calendar", "fr": "Google Agenda" } },
+        { "value": "icloud", "label": { "en": "Apple iCloud", "fr": "Apple iCloud" } },
+        { "value": "fastmail", "label": { "en": "Fastmail", "fr": "Fastmail" } },
+        { "value": "infomaniak", "label": { "en": "Infomaniak", "fr": "Infomaniak" } }
+      ],
+      "required": false
     },
     {
       "key": "server_url",
       "type": "string",
       "label": { "en": "CalDAV server URL", "fr": "URL du serveur CalDAV" },
+      "description": {
+        "en": "Required with \"Other\". Leave it empty for a provider of the list (a URL typed here always wins).",
+        "fr": "Obligatoire avec « Autre ». Laissez vide pour un fournisseur de la liste (une URL saisie ici est toujours prioritaire)."
+      },
       "placeholder": {
         "en": "e.g. https://cloud.example.com/remote.php/dav",
         "fr": "ex. https://cloud.exemple.fr/remote.php/dav"
       },
-      "required": true
+      "required": false
     },
     {
       "key": "username",

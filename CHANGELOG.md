@@ -10,6 +10,23 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- "Provider" list in the account form: Google, iCloud, Fastmail and
+  Infomaniak no longer need a server URL. A typed URL is still used first,
+  so existing accounts are unchanged.
+- "Detailed logs" setting: debug logs of every step of the sync and of the
+  CalDAV requests, to diagnose a calendar that fails.
+- More context in the logs: URL of a failing calendar, skipped calendars,
+  objects the server could not return.
+
+### Fixed
+
+- A calendar no longer fails entirely ("Collection query failed: 404 Not
+  Found", seen on Google) when the server lists an object it then cannot
+  return: the calendar is read again with a single query and only the
+  unreadable objects are skipped.
+
 ## [1.0.0] - 2026-10-29
 
 ### Added

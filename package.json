@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@gladysassistant/integration-sdk": "^0.16.0",
+    "debug": "^4.4.3",
     "ical.js": "^2.2.1",
     "tsdav": "^2.5.0"
   },

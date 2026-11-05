@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
 import { registerHandlers } from '../src/app.js';
-import { ACCOUNT_KEYS, CONFIG_BOUNDS, DEFAULT_CONFIG } from '../src/config.js';
+import { ACCOUNT_KEYS, CONFIG_BOUNDS, DEFAULT_CONFIG, PROVIDERS } from '../src/config.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -68,8 +68,12 @@ test('config_schema defaults and bounds stay consistent with src/config.js', () 
   assert.deepEqual(keys.sort(), Object.keys(DEFAULT_CONFIG).sort());
   for (const field of manifest.config_schema.filter((f) => f.type !== 'section')) {
     assert.equal(DEFAULT_CONFIG[field.key], field.default, `default of ${field.key}`);
-    assert.equal(CONFIG_BOUNDS[field.key].min, field.min, `min of ${field.key}`);
-    assert.equal(CONFIG_BOUNDS[field.key].max, field.max, `max of ${field.key}`);
+    if (field.type === 'number') {
+      assert.equal(CONFIG_BOUNDS[field.key].min, field.min, `min of ${field.key}`);
+      assert.equal(CONFIG_BOUNDS[field.key].max, field.max, `max of ${field.key}`);
+    } else {
+      assert.equal(CONFIG_BOUNDS[field.key], undefined, `bounds of ${field.key}`);
+    }
   }
 });
 
@@ -77,6 +81,19 @@ test('account_schema keys are the ones normalizeAccount reads', () => {
   assert.deepEqual(valueKeys(manifest.account_schema), ACCOUNT_KEYS);
   const password = manifest.account_schema.find((field) => field.key === 'password');
   assert.equal(password.type, 'secret', 'the password must never be sent back to the frontend');
+});
+
+test('the provider options are "other" and the providers of src/config.js', () => {
+  const provider = manifest.account_schema.find((field) => field.key === 'provider');
+  assert.equal(provider.type, 'select');
+  const values = provider.options.map((option) => option.value);
+  assert.deepEqual(values, ['other', ...Object.keys(PROVIDERS)]);
+  for (const option of provider.options) {
+    assert.ok(option.label.en && option.label.fr, `option ${option.value} must be bilingual`);
+  }
+  // A provider fills the URL: the field cannot be required by the form.
+  const serverUrl = manifest.account_schema.find((field) => field.key === 'server_url');
+  assert.equal(serverUrl.required, false);
 });
 
 test('section fields are purely presentational', () => {
