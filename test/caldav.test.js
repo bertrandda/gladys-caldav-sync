@@ -6,12 +6,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCalDavClient, readObjectResponses } from '../src/caldav.js';
+import { createCalDavClient, feedUrl, readObjectResponses } from '../src/caldav.js';
 import { ics, vevent } from './helpers.js';
 
 const SERVER = 'https://dav.example.com';
 const HOME = '/calendars/john/';
 const CALENDAR = `${HOME}main/`;
+const SUBSCRIPTION = `${HOME}holidays-subscription/`;
+const FEED = 'webcal://feeds.example.org/holidays.ics';
 
 const WINDOW = {
   from: new Date('2026-10-01T12:00:00Z'),
@@ -22,7 +24,7 @@ const escapeXml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 const multistatus = (responses) =>
   `<?xml version="1.0" encoding="utf-8"?>
-<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/">
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:ca="http://apple.com/ns/ical/">
 ${responses.join('\n')}
 </d:multistatus>`;
 
@@ -48,8 +50,16 @@ const objectResponse = (href, text) =>
  *   calendar collection itself
  * @param {number} [options.dataQueryStatus] HTTP status of the calendar-query
  *   asking for the data
+ * @param {Record<string, Response | Error>} [options.feeds] answers of the
+ *   feed URLs (any host other than the DAV server)
  */
-function fakeServer({ objects, missing = [], listCollection = false, dataQueryStatus = 207 }) {
+function fakeServer({
+  objects,
+  missing = [],
+  listCollection = false,
+  dataQueryStatus = 207,
+  feeds = {},
+}) {
   const requests = [];
   const xml = (body, status = 207) =>
     new Response(body, { status, headers: { 'content-type': 'application/xml; charset=utf-8' } });
@@ -58,8 +68,15 @@ function fakeServer({ objects, missing = [], listCollection = false, dataQuerySt
     const url = new URL(typeof input === 'string' ? input : input.url);
     const body = typeof init.body === 'string' ? init.body : '';
     const method = init.method ?? 'GET';
-    requests.push({ method, path: url.pathname, body });
+    requests.push({ method, url: url.href, path: url.pathname, body, headers: init.headers });
 
+    if (url.origin !== SERVER) {
+      const answer = feeds[url.href];
+      if (answer instanceof Error) {
+        throw answer;
+      }
+      return answer ?? new Response('', { status: 404, statusText: 'Not Found' });
+    }
     if (url.pathname.startsWith('/.well-known/')) {
       return new Response('', { status: 404 });
     }
@@ -95,6 +112,16 @@ function fakeServer({ objects, missing = [], listCollection = false, dataQuerySt
             '<d:resourcetype><d:collection/><c:calendar/></d:resourcetype>' +
               '<d:displayname>Main</d:displayname><cs:getctag>ctag-1</cs:getctag>' +
               '<c:supported-calendar-component-set><c:comp name="VEVENT"/></c:supported-calendar-component-set>',
+          ),
+          okResponse(
+            SUBSCRIPTION,
+            '<d:resourcetype><d:collection/><cs:subscribed/></d:resourcetype>' +
+              '<d:displayname>Holidays</d:displayname><ca:calendar-color>#FF0000FF</ca:calendar-color>' +
+              `<cs:source><d:href>${FEED}</d:href></cs:source>`,
+          ),
+          okResponse(
+            `${HOME}no-source/`,
+            '<d:resourcetype><d:collection/><cs:subscribed/></d:resourcetype>',
           ),
         ]),
       );
@@ -219,4 +246,83 @@ test('readObjectResponses keeps the readable objects and lists the others', () =
   );
   assert.deepEqual(texts, ['A', 'B']);
   assert.deepEqual(skipped, [`${CALENDAR}c.ics (404 Not Found)`, `${CALENDAR}d.ics (200)`]);
+});
+
+// --- Webcal subscriptions -----------------------------------------------------
+
+const FEED_TEXT = ics(vevent('h', '20261111T090000Z', '20261111T100000Z', 'Holiday'));
+const HTTPS_FEED = 'https://feeds.example.org/holidays.ics';
+
+test('lists the webcal subscriptions apart from the calendars', async () => {
+  const server = fakeServer({ objects: OBJECTS });
+  const client = await createCalDavClient(ACCOUNT, { fetch: server.fetch });
+  const calendars = await client.listCalendars();
+  assert.deepEqual(
+    calendars.map((calendar) => calendar.url),
+    [`${SERVER}${CALENDAR}`],
+  );
+  const subscriptions = await client.listSubscriptions();
+  assert.equal(subscriptions.length, 1);
+  const [subscription] = subscriptions;
+  assert.equal(subscription.url, `${SERVER}${SUBSCRIPTION}`);
+  assert.equal(subscription.source, FEED);
+  assert.equal(subscription.name, 'Holidays');
+  assert.equal(subscription.color, '#FF0000FF');
+  assert.equal(subscription.subscription, true);
+});
+
+test('reads a feed over https, without the CalDAV credentials', async () => {
+  const server = fakeServer({
+    objects: OBJECTS,
+    feeds: { [HTTPS_FEED]: new Response(FEED_TEXT) },
+  });
+  const client = await createCalDavClient(ACCOUNT, { fetch: server.fetch });
+  const [subscription] = await client.listSubscriptions();
+  const feed = await client.fetchSubscription(subscription);
+  assert.equal(feed.text, FEED_TEXT);
+  assert.match(feed.version, /^[0-9a-f]{64}$/);
+  const request = server.requests.find((r) => r.url === HTTPS_FEED);
+  assert.equal(new Headers(request.headers).has('authorization'), false);
+});
+
+test('a webcal feed unreachable over https is read over http', async () => {
+  const server = fakeServer({
+    objects: OBJECTS,
+    feeds: {
+      [HTTPS_FEED]: new TypeError('fetch failed'),
+      'http://feeds.example.org/holidays.ics': new Response(FEED_TEXT),
+    },
+  });
+  const client = await createCalDavClient(ACCOUNT, { fetch: server.fetch });
+  const [subscription] = await client.listSubscriptions();
+  assert.equal((await client.fetchSubscription(subscription)).text, FEED_TEXT);
+});
+
+test('a failing feed names its host only', async () => {
+  const subscription = { name: 'Holidays', source: 'https://feeds.example.org/private/token.ics' };
+  const cases = [
+    [new Response('', { status: 404, statusText: 'Not Found' }), /^feed feeds\.example\.org: 404/],
+    [new Response('<html>login</html>'), /not an iCalendar feed/],
+    [
+      new Response('BEGIN:VCALENDAR', { headers: { 'content-length': String(50 * 1024 * 1024) } }),
+      /feed larger than 20 MB/,
+    ],
+  ];
+  for (const [answer, expected] of cases) {
+    const server = fakeServer({ objects: OBJECTS, feeds: { [subscription.source]: answer } });
+    const client = await createCalDavClient(ACCOUNT, { fetch: server.fetch });
+    await assert.rejects(client.fetchSubscription(subscription), (error) => {
+      assert.match(error.message, expected);
+      assert.doesNotMatch(error.message, /token/);
+      return true;
+    });
+  }
+});
+
+test('feedUrl turns webcal into https and refuses other schemes', () => {
+  assert.equal(feedUrl('webcal://a.example/x.ics').href, 'https://a.example/x.ics');
+  assert.equal(feedUrl(' WEBCALS://a.example/x.ics').href, 'https://a.example/x.ics');
+  assert.equal(feedUrl('http://a.example/x.ics').href, 'http://a.example/x.ics');
+  assert.throws(() => feedUrl('file:///etc/passwd'), /unsupported subscription URL scheme/);
+  assert.throws(() => feedUrl('not a url'));
 });

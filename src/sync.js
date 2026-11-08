@@ -1,17 +1,20 @@
 // -----------------------------------------------------------------------------
 // One synchronization pass of one user's CalDAV account into Gladys.
 //
-//   1. list the calendars of the server, publish them (publishCalendars);
+//   1. list the calendars of the server and the webcal subscriptions of the
+//      account, publish them (publishCalendars);
 //   2. delete the Gladys calendars that disappeared from the server;
 //   3. for every calendar the user did not switch off (`sync: false`), fetch
-//      the objects of the window, expand the recurrences and publish the
+//      the objects of the window (the whole feed for a subscription), expand
+//      the recurrences and publish the
 //      occurrences WITH the window: Gladys prunes the events of the window
 //      absent from the list, which is how a deletion on the server propagates.
 //
 // Writes go through `write(fn)` (see src/scheduler.js), which keeps the
 // integration under the host API quota (30 calendar writes per minute).
 // Nothing is written when nothing changed: the calendar list and each
-// calendar's ctag are remembered in `cache` between two passes.
+// calendar's ctag (the hash of the feed for a subscription) are remembered in
+// `cache` between two passes.
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -83,7 +86,8 @@ function uniqueByExternalId(events) {
  * @param {import('@gladysassistant/integration-sdk').GladysIntegration} gladys
  * @param {{ user: { selector: string, language?: string } }} account
  * @param {object} deps
- * @param {{ listCalendars: Function, fetchObjects: Function }} deps.client
+ * @param {{ listCalendars: Function, fetchObjects: Function,
+ *   listSubscriptions: Function, fetchSubscription: Function }} deps.client
  *   connected CalDAV client (src/caldav.js)
  * @param {{ past_days: number, future_days: number }} deps.config
  * @param {Date} deps.now
@@ -96,8 +100,9 @@ export async function syncAccount(gladys, account, { client, config, now, cache,
   const { user } = account;
   const summary = { calendars: 0, events: 0, skipped: 0, errors: [] };
 
-  // 1) Calendars of the server.
-  let remoteCalendars = await client.listCalendars();
+  // 1) Calendars of the server, then the webcal subscriptions: both count in
+  // the calendars of the user.
+  let remoteCalendars = [...(await client.listCalendars()), ...(await client.listSubscriptions())];
   if (remoteCalendars.length > LIMITS.calendarsPerUser) {
     logger.warn(
       `${user.selector}: ${remoteCalendars.length} calendars on the server, syncing the first ${LIMITS.calendarsPerUser}`,
@@ -141,7 +146,7 @@ export async function syncAccount(gladys, account, { client, config, now, cache,
       continue;
     }
     // Same ctag and same window as the last pass: nothing changed.
-    const cacheKey = calendar.ctag ? `${calendar.ctag}|${windowKey}` : null;
+    let cacheKey = calendar.ctag ? `${calendar.ctag}|${windowKey}` : null;
     const cached = cache.ctags.get(externalId);
     if (cacheKey && cached?.key === cacheKey) {
       logger.debug(`${user.selector}: "${calendar.name}" unchanged (same ctag)`);
@@ -149,7 +154,21 @@ export async function syncAccount(gladys, account, { client, config, now, cache,
       continue;
     }
     try {
-      const icsTexts = await client.fetchObjects(calendar, window);
+      let icsTexts;
+      if (calendar.subscription) {
+        // A feed has no ctag: it is downloaded, and published only when its
+        // content (or the window) changed.
+        const feed = await client.fetchSubscription(calendar);
+        cacheKey = `${feed.version}|${windowKey}`;
+        if (cached?.key === cacheKey) {
+          logger.debug(`${user.selector}: "${calendar.name}" unchanged (same feed)`);
+          summary.events += cached.events;
+          continue;
+        }
+        icsTexts = [feed.text];
+      } else {
+        icsTexts = await client.fetchObjects(calendar, window);
+      }
       const occurrences = expandEvents(icsTexts, window, {
         onError: (error) =>
           logger.warn(

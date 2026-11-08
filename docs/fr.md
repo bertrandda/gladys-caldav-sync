@@ -45,6 +45,23 @@ L'intégration découvre elle-même vos calendriers depuis cette URL (principal
 et dossier de calendriers) : inutile d'indiquer l'adresse de chaque calendrier.
 Les listes de tâches sont ignorées.
 
+## Calendriers abonnés (webcal)
+
+Les calendriers auxquels votre compte est **abonné** par une adresse (jours
+fériés, matchs, emploi du temps scolaire… — adresses `webcal://` ou
+`https://`) sont synchronisés eux aussi, lorsque votre serveur conserve les
+abonnements dans votre compte : c'est le cas de Nextcloud, iCloud, SOGo. Ils
+apparaissent dans Gladys comme vos autres calendriers, avec les mêmes
+interrupteurs.
+
+- L'intégration lit le flux **elle-même**, à son adresse : le flux doit être
+  joignable depuis votre Gladys. Il est lu sans vos identifiants CalDAV.
+- Un flux est lu à chaque synchronisation, mais n'est écrit dans Gladys que
+  si son contenu a changé.
+- Un abonnement qui n'existe que dans une application (un calendrier abonné
+  seulement dans Thunderbird ou sur un téléphone) n'est pas sur le serveur :
+  l'intégration ne peut pas le voir.
+
 ## Choisir quoi synchroniser et partager
 
 Chaque calendrier synchronisé apparaît dans Gladys avec deux interrupteurs :
@@ -82,8 +99,8 @@ affiche le nombre de calendriers et d'événements synchronisés.
   déplacées) sont développés en occurrences individuelles.
 - Les événements annulés (`STATUS:CANCELLED`) ne sont pas importés.
 - Un événement à heure « flottante » (sans fuseau horaire) est lu en UTC.
-- Limites de Gladys : 50 calendriers par utilisateur, 10 000 événements par
-  calendrier ; les textes trop longs sont tronqués.
+- Limites de Gladys : 50 calendriers par utilisateur (abonnements compris),
+  10 000 événements par calendrier ; les textes trop longs sont tronqués.
 - Désactiver l'intégration pour votre compte supprime de Gladys vos
   calendriers synchronisés (ils restent intacts sur le serveur).
 
@@ -103,6 +120,10 @@ les plus fréquentes :
   liste un événement qu'il n'arrive ensuite pas à renvoyer (Google le fait sur
   certains calendriers). Le reste du calendrier est synchronisé ; seuls ces
   objets manquent.
+- **« feed … : 404 Not Found »** (ou « not an iCalendar feed ») — un
+  calendrier abonné dont l'adresse ne fonctionne plus : vérifiez-la dans votre
+  application de calendrier. L'erreur ne cite que l'hôte du flux, son adresse
+  complète pouvant contenir une clé privée.
 
 L'administrateur trouve le détail des erreurs dans les logs de l'intégration
 (page de l’intégration, onglet de supervision). Les mots de passe n'y

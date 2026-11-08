@@ -10,6 +10,13 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Webcal subscriptions: the calendars the CalDAV account is subscribed to by
+  URL (Nextcloud, iCloud, SOGo…) are synced like the other calendars. The
+  integration reads each feed at its address, without the CalDAV credentials,
+  and writes it to Gladys only when its content changed.
+
 ## [1.0.1] - 2026-11-05
 
 ### Added

@@ -32,7 +32,8 @@ export function vevent(uid, start, end, summary = uid) {
 
 /**
  * In-memory CalDAV server: `servers[serverUrl] = { calendars: [{ url, name,
- * color, ctag, objects: [icsText] }] }`. Returns a `createClient` for
+ * color, ctag, objects: [icsText] }], subscriptions: [{ url, source, name,
+ * color, feed: icsText, fail }] }`. Returns a `createClient` for
  * registerHandlers / SyncManager, and the log of the calls it served.
  */
 export function createFakeCalDav(servers) {
@@ -54,6 +55,27 @@ export function createFakeCalDav(servers) {
           ctag: calendar.ctag ?? '',
           raw: calendar,
         }));
+      },
+      async listSubscriptions() {
+        calls.push({ type: 'listSubscriptions', server: account.server_url });
+        return (server.subscriptions ?? []).map((subscription) => ({
+          url: subscription.url,
+          source: subscription.source,
+          name: subscription.name ?? '',
+          description: subscription.description ?? '',
+          color: subscription.color ?? '',
+          ctag: '',
+          subscription: true,
+          raw: subscription,
+        }));
+      },
+      async fetchSubscription(subscription) {
+        calls.push({ type: 'fetchSubscription', url: subscription.url });
+        if (subscription.raw.fail) {
+          throw new Error('feed example.org: 404 Not Found');
+        }
+        // The feed itself stands for its hash.
+        return { text: subscription.raw.feed, version: subscription.raw.feed };
       },
       async fetchObjects(calendar, window) {
         calls.push({ type: 'fetchObjects', url: calendar.url, window });
