@@ -10,9 +10,10 @@ const NOW = new Date('2026-10-01T08:00:00Z');
 const SERVER = 'https://dav.example.com';
 const WORK = `${SERVER}/calendars/john/work/`;
 const HOME = `${SERVER}/calendars/john/home/`;
+const HOLIDAYS = `${SERVER}/calendars/john/holidays/`;
 
-function setup(calendars) {
-  const caldav = createFakeCalDav({ [SERVER]: { password: 'secret', calendars } });
+function setup(calendars, subscriptions = []) {
+  const caldav = createFakeCalDav({ [SERVER]: { password: 'secret', calendars, subscriptions } });
   const john = account('john', SERVER);
   const gladys = createFakeGladys({ calendarAccounts: [john] });
   return { gladys, caldav, john };
@@ -228,4 +229,103 @@ test('one failing calendar does not stop the others', async () => {
   assert.equal(summary.errors.length, 1);
   assert.match(summary.errors[0], /^Work: Server error/);
   assert.equal(gladys.fake.calendarEvents.length, 1);
+});
+
+// --- Webcal subscriptions -----------------------------------------------------
+
+const FULL_DAY = (uid, date, summary) =>
+  `BEGIN:VEVENT\nUID:${uid}\nDTSTART;VALUE=DATE:${date}\nSUMMARY:${summary}\nEND:VEVENT`;
+
+function holidays(...events) {
+  return {
+    url: HOLIDAYS,
+    source: 'webcal://example.org/holidays.ics',
+    name: 'Holidays',
+    color: '#ff0000',
+    feed: ics(...events),
+  };
+}
+
+const writesOf = (gladys) => gladys.fake.requests.filter((r) => r.method !== 'GET').length;
+
+test('a webcal subscription is published like a calendar, with its events', async () => {
+  const subscription = holidays(
+    FULL_DAY('armistice', '20261111', 'Armistice'),
+    FULL_DAY('old', '20200101', 'Out of the window'),
+    'BEGIN:VEVENT\nUID:weekly\nDTSTART:20261005T090000Z\nDTEND:20261005T100000Z\n' +
+      'RRULE:FREQ=WEEKLY;COUNT=3\nSUMMARY:Weekly\nEND:VEVENT',
+  );
+  const { gladys, caldav, john } = setup(
+    [{ url: WORK, name: 'Work', ctag: '1', objects: [] }],
+    [subscription],
+  );
+  const summary = await run(gladys, caldav, john);
+
+  assert.deepEqual(summary, { calendars: 2, events: 4, skipped: 0, errors: [] });
+  const holidaysId = calendarExternalId(gladys, 'john', HOLIDAYS);
+  const published = gladys.fake.calendars.find((c) => c.external_id === holidaysId);
+  assert.equal(published.name, 'Holidays');
+  assert.equal(published.color, '#ff0000');
+  const events = gladys.fake.calendarEvents.filter((e) => e.calendar_external_id === holidaysId);
+  assert.deepEqual(events.map((e) => e.name).sort(), ['Armistice', 'Weekly', 'Weekly', 'Weekly']);
+  const armistice = events.find((e) => e.name === 'Armistice');
+  assert.equal(armistice.full_day, true);
+});
+
+test('an unchanged feed is downloaded but not written again', async () => {
+  const subscription = holidays(FULL_DAY('armistice', '20261111', 'Armistice'));
+  const { gladys, caldav, john } = setup([], [subscription]);
+  const cache = { ctags: new Map() };
+  await run(gladys, caldav, john, cache);
+  const writes = writesOf(gladys);
+
+  const summary = await run(gladys, caldav, john, cache);
+  assert.equal(summary.events, 1);
+  assert.equal(writesOf(gladys), writes);
+  assert.equal(caldav.calls.filter((c) => c.type === 'fetchSubscription').length, 2);
+
+  // The feed changes: the calendar is published again, the gone event pruned.
+  subscription.feed = ics(FULL_DAY('christmas', '20261225', 'Christmas'));
+  await run(gladys, caldav, john, cache);
+  assert.ok(writesOf(gladys) > writes);
+  assert.deepEqual(
+    gladys.fake.calendarEvents.map((e) => e.name),
+    ['Christmas'],
+  );
+});
+
+test('a failing feed does not stop the other calendars', async () => {
+  const subscription = { ...holidays(), fail: true };
+  const { gladys, caldav, john } = setup(
+    [
+      {
+        url: WORK,
+        name: 'Work',
+        ctag: '1',
+        objects: [ics(vevent('a', '20261005T090000Z', '20261005T100000Z'))],
+      },
+    ],
+    [subscription],
+  );
+  const summary = await run(gladys, caldav, john);
+  assert.equal(summary.errors.length, 1);
+  assert.match(summary.errors[0], /^Holidays: feed example.org: 404/);
+  assert.equal(gladys.fake.calendarEvents.length, 1);
+});
+
+test('a subscription switched off is skipped, one removed is deleted', async () => {
+  const subscriptions = [holidays(FULL_DAY('armistice', '20261111', 'Armistice'))];
+  const { gladys, caldav, john } = setup([], subscriptions);
+  await run(gladys, caldav, john);
+  gladys.fake.calendars[0].sync = false;
+  gladys.fake.calendarEvents = [];
+
+  const summary = await run(gladys, caldav, john);
+  assert.equal(summary.skipped, 1);
+  assert.equal(caldav.calls.filter((c) => c.type === 'fetchSubscription').length, 1);
+
+  subscriptions.pop();
+  await run(gladys, caldav, john);
+  assert.deepEqual(gladys.fake.calendars, []);
+  assert.equal(gladys.fake.deletedCalendars.length, 1);
 });

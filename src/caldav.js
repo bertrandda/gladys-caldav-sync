@@ -9,14 +9,23 @@
 //   const client = await createCalDavClient(account);
 //   const calendars = await client.listCalendars();
 //   const icsTexts = await client.fetchObjects(calendars[0], { from, to });
+//   const subscriptions = await client.listSubscriptions();
+//   const { text, version } = await client.fetchSubscription(subscriptions[0]);
 //
 // Objects are read with tsdav's two-step fetch (calendar-query for the hrefs,
 // calendar-multiget for the data). tsdav fails the whole calendar when ONE
 // href of the multiget answers an error, which Google does (404) on some
 // calendars: the fallback is a single calendar-query returning the data,
 // where the objects the server cannot return are skipped, not fatal.
+//
+// Webcal subscriptions of the account (Nextcloud, iCloud…) sit in the
+// calendar home as `<cs:subscribed/>` collections, not `<c:calendar/>` ones:
+// tsdav's fetchCalendars ignores them. Their `<cs:source>` is the URL of a
+// public iCalendar feed, read with a plain GET, WITHOUT the CalDAV
+// credentials (the feed is usually hosted by a third party).
 // -----------------------------------------------------------------------------
 
+import { createHash } from 'node:crypto';
 import { createLogger } from '@gladysassistant/integration-sdk';
 import { DAVClient, getDAVAttribute, urlMatches } from 'tsdav';
 
@@ -28,6 +37,9 @@ const MAX_HREFS_LOGGED = 5;
 // Per-request timeout: a server that never answers must not freeze the sync
 // queue of every other user.
 const REQUEST_TIMEOUT_MS = 30_000;
+
+// Biggest webcal feed read: a whole feed is held in memory and parsed at once.
+const MAX_FEED_BYTES = 20 * 1024 * 1024;
 
 function fetchWithTimeout(input, init = {}) {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
@@ -73,6 +85,42 @@ function calendarDataOf(response) {
 }
 
 /**
+ * HTTP(S) URL of a webcal subscription source: `webcal://` and `webcals://`
+ * are read over https (the fallback to http is up to the caller).
+ * @param {string} source `<cs:source>` of the subscription
+ * @returns {URL}
+ */
+export function feedUrl(source) {
+  const text = typeof source === 'string' ? source.trim() : '';
+  const url = new URL(text.replace(/^webcals?:\/\//i, 'https://'));
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(`unsupported subscription URL scheme "${url.protocol}"`);
+  }
+  return url;
+}
+
+// Body of a response, refused beyond `maxBytes` without reading it all.
+async function readText(response, maxBytes) {
+  const tooBig = () => new Error(`feed larger than ${Math.round(maxBytes / 1024 / 1024)} MB`);
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    throw tooBig();
+  }
+  if (!response.body) {
+    return '';
+  }
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of response.body) {
+    size += chunk.byteLength;
+    if (size > maxBytes) {
+      throw tooBig();
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+/**
  * Split the entries of a calendar-query multistatus: the calendar data of the
  * readable objects, and the hrefs the server answered an error (or nothing)
  * for. The collection itself, which some servers list, is neither.
@@ -103,15 +151,17 @@ export function readObjectResponses(responses, calendarUrl) {
  * @param {{ server_url: string, username: string, password: string }} account
  *   normalized account (see normalizeAccount in src/config.js)
  * @param {{ fetch?: typeof fetch }} [options] HTTP client (tests)
- * @returns {Promise<{ listCalendars: Function, fetchObjects: Function }>}
+ * @returns {Promise<{ listCalendars: Function, fetchObjects: Function,
+ *   listSubscriptions: Function, fetchSubscription: Function }>}
  */
 export async function createCalDavClient(account, { fetch: fetchImpl } = {}) {
+  const httpFetch = fetchImpl ?? fetchWithTimeout;
   const client = new DAVClient({
     serverUrl: account.server_url,
     credentials: { username: account.username, password: account.password },
     authMethod: 'Basic',
     defaultAccountType: 'caldav',
-    fetch: fetchImpl ?? fetchWithTimeout,
+    fetch: httpFetch,
   });
   // Service discovery: resolves the principal and the calendar home.
   try {
@@ -243,6 +293,105 @@ export async function createCalDavClient(account, { fetch: fetchImpl } = {}) {
       const texts = objects.map((object) => object.data).filter((data) => typeof data === 'string');
       logger.debug(`"${calendar.name}": ${texts.length} object(s) read by calendar-multiget`);
       return texts;
+    },
+
+    /**
+     * Webcal subscriptions of the account: the `<cs:subscribed/>` collections
+     * of the calendar home that have a source URL.
+     * @returns {Promise<Array<{ url, source, name, description, color, ctag, subscription, raw }>>}
+     */
+    async listSubscriptions() {
+      const homeUrl = client.account?.homeUrl;
+      if (!homeUrl) {
+        return [];
+      }
+      const responses = await client.propfind({
+        url: homeUrl,
+        depth: '1',
+        props: {
+          'd:resourcetype': {},
+          'd:displayname': {},
+          'c:calendar-description': {},
+          'ca:calendar-color': {},
+          'cs:source': {},
+        },
+      });
+      const [first] = responses;
+      if (responses.length === 1 && first && !first.raw?.multistatus && !first.ok) {
+        throw new Error(
+          `subscription listing on ${pathOf(homeUrl)} failed: ${first.status} ${first.statusText}`,
+        );
+      }
+      const subscriptions = [];
+      for (const response of responses) {
+        const props = response.props ?? {};
+        if (!response.href || !Object.keys(props.resourcetype ?? {}).includes('subscribed')) {
+          continue;
+        }
+        const source = textOf(props.source?.href ?? props.source).trim();
+        const url = new URL(response.href, homeUrl).href;
+        logger.debug(
+          `subscription "${textOf(props.displayname)}" ${url}` +
+            (source ? '' : ' -> ignored (no source URL)'),
+        );
+        if (source) {
+          subscriptions.push({
+            url,
+            source,
+            name: textOf(props.displayname),
+            description: textOf(props.calendarDescription),
+            color: textOf(props.calendarColor),
+            // Unknown before the feed is read: see fetchSubscription().
+            ctag: '',
+            subscription: true,
+            raw: response,
+          });
+        }
+      }
+      logger.debug(`${subscriptions.length} webcal subscription(s) in the calendar home`);
+      return subscriptions;
+    },
+
+    /**
+     * Read the iCalendar feed of a subscription. Errors name the feed host
+     * only: a feed URL often carries a private token.
+     * @param {{ name: string, source: string }} subscription one of listSubscriptions()
+     * @returns {Promise<{ text: string, version: string }>} the feed and a
+     *   hash of it (the feeds have no reliable ctag or ETag)
+     */
+    async fetchSubscription(subscription) {
+      const url = feedUrl(subscription.source);
+      const get = (target) =>
+        httpFetch(target.href, { headers: { accept: 'text/calendar, */*;q=0.5' } });
+      let response;
+      try {
+        response = await get(url);
+      } catch (error) {
+        // webcal:// does not say https or http: some feeds are http only.
+        if (!/^webcal:/i.test(subscription.source.trim()) || error?.name !== 'TypeError') {
+          throw new Error(`feed ${url.host}: ${error.message}`, { cause: error });
+        }
+        url.protocol = 'http:';
+        logger.debug(`"${subscription.name}": https failed (${error.message}), trying http`);
+        try {
+          response = await get(url);
+        } catch (httpError) {
+          throw new Error(`feed ${url.host}: ${httpError.message}`, { cause: httpError });
+        }
+      }
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        throw new Error(`feed ${url.host}: ${response.status} ${response.statusText}`.trim());
+      }
+      const text = await readText(response, MAX_FEED_BYTES).catch((error) => {
+        throw new Error(`feed ${url.host}: ${error.message}`, { cause: error });
+      });
+      if (!text.includes('BEGIN:VCALENDAR')) {
+        throw new Error(`feed ${url.host}: not an iCalendar feed`);
+      }
+      const version = createHash('sha256').update(text).digest('hex');
+      logger.debug(`"${subscription.name}": feed read, ${text.length} characters`);
+      return { text, version };
     },
   };
 }

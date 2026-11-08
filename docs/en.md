@@ -41,6 +41,22 @@ The integration discovers your calendars from that URL (principal and
 calendar home): no need to enter the address of each calendar. Task lists are
 ignored.
 
+## Subscribed calendars (webcal)
+
+The calendars your account is **subscribed** to by URL (public holidays,
+sports fixtures, school timetable… — `webcal://` or `https://` addresses) are
+synced too, when your server keeps the subscriptions in your account:
+Nextcloud, iCloud, SOGo do. They show up in Gladys like your other calendars,
+with the same toggles.
+
+- The integration reads the feed **itself**, at its address: the feed must be
+  reachable from your Gladys. It is read without your CalDAV credentials.
+- A feed is read at every sync, but written to Gladys only when its content
+  changed.
+- A subscription that only exists in a client application (a calendar
+  subscribed in Thunderbird or on a phone only) is not on the server: the
+  integration cannot see it.
+
 ## Choose what to sync and share
 
 Every synced calendar shows up in Gladys with two toggles:
@@ -76,8 +92,8 @@ calendars and events were synced.
   into individual occurrences.
 - Cancelled events (`STATUS:CANCELLED`) are not imported.
 - A "floating" time event (without time zone) is read as UTC.
-- Gladys limits: 50 calendars per user, 10,000 events per calendar; texts too
-  long are truncated.
+- Gladys limits: 50 calendars per user (subscriptions included), 10,000
+  events per calendar; texts too long are truncated.
 - Disabling the integration for your account deletes your synced calendars
   from Gladys (they stay untouched on the server).
 
@@ -96,6 +112,10 @@ causes:
 - **"N object(s) the server could not return were skipped"** — the server
   lists an event it then fails to send (Google does it on some calendars).
   The rest of the calendar is synced; only those objects are missing.
+- **"feed …: 404 Not Found"** (or "not an iCalendar feed") — a subscribed
+  calendar whose address no longer works: check it in your calendar
+  application. The error names the feed's host only, its full address may
+  hold a private key.
 
 The administrator finds the details of the errors in the integration logs
 (the integration page, supervision tab). Passwords never show up there.
